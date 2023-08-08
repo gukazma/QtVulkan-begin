@@ -2,9 +2,18 @@ set(TARGET_NAME "TEST")
 
 enable_testing()
 # just for qt
-# set(CMAKE_AUTOUIC ON)
-# set(CMAKE_AUTOMOC ON)
-# set(CMAKE_AUTORCC ON)
+set(CMAKE_AUTOUIC ON)
+set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTORCC ON)
+set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/CMakeModules;${CMAKE_MODULE_PATH}")
+
+find_package(Qt5 COMPONENTS
+        Core
+        Gui
+        Widgets
+        REQUIRED)
+
+find_package(Vulkan REQUIRED)
 file(GLOB_RECURSE HEADER_FILES "*.h")
 file(GLOB_RECURSE SOURCE_FILES "*.cpp")
 
@@ -24,8 +33,11 @@ set_target_properties(${TARGET_NAME} PROPERTIES VS_DEBUGGER_COMMAND_ARGUMENTS "$
 
 target_link_libraries(${TARGET_NAME} 
       PRIVATE
-            ${PROJECT_NAME}::Primitives
             gtest_main
+            Qt5::Core
+            Qt5::Gui
+            Qt5::Widgets
+            Vulkan::Vulkan
 )
 
 target_include_directories(
