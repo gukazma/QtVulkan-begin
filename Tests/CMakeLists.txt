@@ -13,7 +13,7 @@ find_package(Qt5 COMPONENTS
         Widgets
         REQUIRED)
 
-find_package(Vulkan REQUIRED)
+find_package(Vulkan COMPONENTS glslang SPIRV-Tools  shaderc_combined REQUIRED)
 file(GLOB_RECURSE HEADER_FILES "*.h")
 file(GLOB_RECURSE SOURCE_FILES "*.cpp")
 
@@ -38,6 +38,10 @@ target_link_libraries(${TARGET_NAME}
             Qt5::Gui
             Qt5::Widgets
             Vulkan::Vulkan
+            Shader
+            Vulkan::glslang
+            Vulkan::SPIRV-Tools
+            Vulkan::shaderc_combined
 )
 
 target_include_directories(
