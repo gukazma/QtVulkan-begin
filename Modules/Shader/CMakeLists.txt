@@ -11,7 +11,10 @@ file(GLOB_RECURSE SHADER_FILES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/gl
                                             "${CMAKE_CURRENT_SOURCE_DIR}/glsl/*.rgen"
                                             "${CMAKE_CURRENT_SOURCE_DIR}/glsl/*.rchit"
                                             "${CMAKE_CURRENT_SOURCE_DIR}/glsl/*.rmiss"
-                                            "${CMAKE_CURRENT_SOURCE_DIR}/glsl/*.rcall")
+                                            "${CMAKE_CURRENT_SOURCE_DIR}/glsl/*.rcall"
+                                            "${CMAKE_CURRENT_SOURCE_DIR}/hlsl/*.vert.hlsl"
+                                            "${CMAKE_CURRENT_SOURCE_DIR}/hlsl/*.frag.hlsl"
+                                            )
 
 SOURCE_GROUP("shaders" FILES ${SHADER_FILES})
 

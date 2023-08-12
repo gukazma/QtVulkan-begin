@@ -1,5 +1,5 @@
 function(compile_shader SHADERS TARGET_NAME SHADER_INCLUDE_FOLDER GENERATED_DIR GLSLANG_BIN)
-
+    add_custom_target(${TARGET_NAME})
     set(working_dir "${CMAKE_CURRENT_SOURCE_DIR}")
 
     set(ALL_GENERATED_SPV_FILES "")
@@ -19,8 +19,8 @@ function(compile_shader SHADERS TARGET_NAME SHADER_INCLUDE_FOLDER GENERATED_DIR 
         set(CPP_FILE "${CMAKE_CURRENT_SOURCE_DIR}/${GENERATED_DIR}/cpp/shader/${HEADER_NAME}.h")
 
         add_custom_command(
-            OUTPUT ${SPV_FILE}
-            COMMAND ${GLSLANG_BIN} -I${SHADER_INCLUDE_FOLDER} -V -o ${SPV_FILE} ${SHADER}
+            TARGET ${TARGET_NAME} POST_BUILD
+            COMMAND ${GLSLANG_BIN} -I${SHADER_INCLUDE_FOLDER} -V -e main -o ${SPV_FILE} ${SHADER}
             DEPENDS ${SHADER}
             WORKING_DIRECTORY "${working_dir}")
 
@@ -29,8 +29,8 @@ function(compile_shader SHADERS TARGET_NAME SHADER_INCLUDE_FOLDER GENERATED_DIR 
         # generate cpp header
         string(REPLACE "\." "\_" VARNAME ${SHADER_NAME})
         add_custom_command(
-            OUTPUT ${CPP_FILE}
-            COMMAND ${GLSLANG_BIN} -I${SHADER_INCLUDE_FOLDER} -V --vn ${VARNAME}  ${SHADER} -o ${CPP_FILE}
+            TARGET ${TARGET_NAME} POST_BUILD
+            COMMAND ${GLSLANG_BIN} -I${SHADER_INCLUDE_FOLDER} -V --vn ${VARNAME} -e main  ${SHADER} -o ${CPP_FILE}
             DEPENDS ${SHADER}
             WORKING_DIRECTORY "${working_dir}")
         
@@ -39,8 +39,7 @@ function(compile_shader SHADERS TARGET_NAME SHADER_INCLUDE_FOLDER GENERATED_DIR 
 
     endforeach()
 
-    add_custom_target(${TARGET_NAME}
-        DEPENDS ${ALL_GENERATED_SPV_FILES} ${ALL_GENERATED_CPP_FILES} SOURCES ${SHADERS})
+    
     # add_custom_target(${TARGET_NAME}
     #     DEPENDS ${ALL_GENERATED_SPV_FILES} SOURCES ${SHADERS})
 
