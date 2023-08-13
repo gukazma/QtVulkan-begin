@@ -37,4 +37,4 @@ target_include_directories(Shader
 INTERFACE 
 ${SHADER_INCLUDE_FOLDER}
 )
-set_target_properties(Shadercompile PROPERTIES FOLDER Module/Shader)
+set_target_properties(Shadercompile PROPERTIES FOLDER Modules/Shader)
