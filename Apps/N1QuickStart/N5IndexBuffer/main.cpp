@@ -1,4 +1,4 @@
-#include "TriangleRenderer.h"
+#include "QuadRenderer.h"
 #include <QGuiApplication>
 #include <QLoggingCategory>
 #include <QVulkanInstance>
@@ -11,7 +11,7 @@ Q_LOGGING_CATEGORY(lcVk, "qt.vulkan")
 class VulkanWindow : public QVulkanWindow
 {
 public:
-    QVulkanWindowRenderer* createRenderer() override { return new TriangleRenderer(this); }
+    QVulkanWindowRenderer* createRenderer() override { return new QuadRenderer(this); }
 };
 
 int main(int argc, char* argv[])

@@ -3,10 +3,10 @@
 #include <QVulkanWindowRenderer>
 #include <vulkan\vulkan.hpp>
 
-class TriangleRenderer : public QVulkanWindowRenderer
+class QuadRenderer : public QVulkanWindowRenderer
 {
 public:
-    TriangleRenderer(QVulkanWindow* window);
+    QuadRenderer(QVulkanWindow* window);
     void initResources() override;
     void initSwapChainResources() override;
     void releaseSwapChainResources() override;
@@ -17,6 +17,8 @@ private:
     QVulkanWindow*   window_ = nullptr;
     vk::Buffer       vertexBuffer_;
     vk::DeviceMemory vertexDevMemory_;
+    vk::Buffer       indexBuffer_;
+    vk::DeviceMemory indexDevMemory_;
 
     vk::PipelineCache  piplineCache_;
     vk::PipelineLayout piplineLayout_;

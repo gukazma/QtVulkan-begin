@@ -1,4 +1,4 @@
-#include "TriangleRenderer.h"
+#include "QuadRenderer.h"
 #include "Shader/N6UniformBuffer_vert.h"
 #include "Shader/N6UniformBuffer_frag.h"
 #include <QTime>
@@ -13,11 +13,11 @@ static inline vk::DeviceSize aligned(vk::DeviceSize v, vk::DeviceSize byteAlign)
     return (v + byteAlign - 1) & ~(byteAlign - 1);
 }
 
-TriangleRenderer::TriangleRenderer(QVulkanWindow* window)
+QuadRenderer::QuadRenderer(QVulkanWindow* window)
     : window_(window)
 {}
 
-void TriangleRenderer::initResources()
+void QuadRenderer::initResources()
 {
     vk::Device               device               = window_->device();
     const int                concurrentFrameCount = window_->concurrentFrameCount();
@@ -202,11 +202,11 @@ void TriangleRenderer::initResources()
     device.destroyShaderModule(fragShader);
 }
 
-void TriangleRenderer::initSwapChainResources() {}
+void QuadRenderer::initSwapChainResources() {}
 
-void TriangleRenderer::releaseSwapChainResources() {}
+void QuadRenderer::releaseSwapChainResources() {}
 
-void TriangleRenderer::releaseResources()
+void QuadRenderer::releaseResources()
 {
     vk::Device device = window_->device();
     device.destroyPipeline(pipline_);
@@ -222,7 +222,7 @@ void TriangleRenderer::releaseResources()
     device.freeMemory(uniformDevMemory_);
 }
 
-void TriangleRenderer::startNextFrame()
+void QuadRenderer::startNextFrame()
 {
     vk::Device        device    = window_->device();
     vk::CommandBuffer cmdBuffer = window_->currentCommandBuffer();
