@@ -1,2 +1,3 @@
 add_subdirectory(N3HelloTriangle)
 add_subdirectory(N4StagingBuffer)
+add_subdirectory(N5IndexBuffer)

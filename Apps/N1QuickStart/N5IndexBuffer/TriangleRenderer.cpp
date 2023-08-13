@@ -1,24 +1,11 @@
 #include "TriangleRenderer.h"
-#include "shader/N3HelloTriangle_frag.h"
-#include "shader/N3HelloTriangle_frag_hlsl.h"
-#include "shader/N3HelloTriangle_vert.h"
-#include "shader/N3HelloTriangle_vert_hlsl.h"
+#include "Shader/N5IndexBuffer_frag.h"
+#include "Shader/N5IndexBuffer_vert.h"
 static float vertexData[] = {   // Y up, front = CCW
-    0.0f,
-    -0.5f,
-    1.0f,
-    0.0f,
-    0.0f,
-    -0.5f,
-    0.5f,
-    0.0f,
-    1.0f,
-    0.0f,
-    0.5f,
-    0.5f,
-    0.0f,
-    0.0f,
-    1.0f};
+    -0.5f, -0.5f, 1.0f, 0.0f, 0.0f, 0.5f,  -0.5f, 0.0f, 1.0f, 0.0f,
+    0.5f,  0.5f,  0.0f, 0.0f, 1.0f, -0.5f, 0.5f,  1.0f, 1.0f, 1.0f};
+
+static uint16_t indexData[] = {0, 1, 2, 2, 3, 0};
 
 TriangleRenderer::TriangleRenderer(QVulkanWindow* window)
     : window_(window)
@@ -31,39 +18,41 @@ void TriangleRenderer::initResources()
     vk::PhysicalDeviceLimits limits               = window_->physicalDeviceProperties()->limits;
 
     vk::BufferCreateInfo vertexBufferInfo;
-    vertexBufferInfo.usage =
-        vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eTransferDst;
+    vertexBufferInfo.usage              = vk::BufferUsageFlagBits::eVertexBuffer;
     vertexBufferInfo.size               = sizeof(vertexData);
     vertexBuffer_                       = device.createBuffer(vertexBufferInfo);
     vk::MemoryRequirements vertexMemReq = device.getBufferMemoryRequirements(vertexBuffer_);
-    vk::MemoryAllocateInfo vertexMemAllocInfo(vertexMemReq.size, window_->deviceLocalMemoryIndex());
+    vk::MemoryAllocateInfo vertexMemAllocInfo(vertexMemReq.size, window_->hostVisibleMemoryIndex());
     vertexDevMemory_ = device.allocateMemory(vertexMemAllocInfo);
     device.bindBufferMemory(vertexBuffer_, vertexDevMemory_, 0);
+    uint8_t* vertexBufferMemPtr =
+        (uint8_t*)device.mapMemory(vertexDevMemory_, 0, vertexMemReq.size);
+    memcpy(vertexBufferMemPtr, vertexData, sizeof(vertexData));
+    device.unmapMemory(vertexDevMemory_);
 
-    vk::BufferCreateInfo stagingBufferInfo;
-    stagingBufferInfo.usage              = vk::BufferUsageFlagBits::eTransferSrc;
-    stagingBufferInfo.size               = sizeof(vertexData);
-    vk::Buffer             stagingBuffer = device.createBuffer(stagingBufferInfo);
-    vk::MemoryRequirements stagingMemReq = device.getBufferMemoryRequirements(stagingBuffer);
-    vk::MemoryAllocateInfo stagingMemAllocInfo(stagingMemReq.size,
-                                               window_->hostVisibleMemoryIndex());
-    vk::DeviceMemory       stagingDevMemory = device.allocateMemory(stagingMemAllocInfo);
-    device.bindBufferMemory(stagingBuffer, stagingDevMemory, 0);
+
+    vk::BufferCreateInfo indexBufferInfo;
+    indexBufferInfo.usage              = vk::BufferUsageFlagBits::eIndexBuffer;
+    indexBufferInfo.size               = sizeof(indexData);
+    indexBuffer_                       = device.createBuffer(indexBufferInfo);
+    vk::MemoryRequirements indexMemReq = device.getBufferMemoryRequirements(indexBuffer_);
+    vk::MemoryAllocateInfo indexMemInfo(indexMemReq.size, window_->hostVisibleMemoryIndex());
+    indexDevMemory_ = device.allocateMemory(indexMemInfo);
+    device.bindBufferMemory(indexBuffer_, indexDevMemory_, 0);
+    uint8_t* indexBufferMemPtr = (uint8_t*)device.mapMemory(indexDevMemory_, 0, indexMemReq.size);
+    memcpy(indexBufferMemPtr, indexData, sizeof(indexData));
+    device.unmapMemory(indexDevMemory_);
 
     vk::GraphicsPipelineCreateInfo piplineInfo;
     piplineInfo.stageCount = 2;
 
     vk::ShaderModuleCreateInfo shaderInfo;
-    shaderInfo.codeSize = sizeof(N3HelloTriangle_vert);
-    shaderInfo.pCode    = N3HelloTriangle_vert;
-    /*shaderInfo.codeSize         = sizeof(N3HelloTriangle_vert_hlsl);
-    shaderInfo.pCode            = N3HelloTriangle_vert_hlsl;*/
+    shaderInfo.codeSize = sizeof(N5IndexBuffer_vert);
+    shaderInfo.pCode    = N5IndexBuffer_vert;
     vk::ShaderModule vertShader = device.createShaderModule(shaderInfo);
 
-    shaderInfo.codeSize = sizeof(N3HelloTriangle_frag);
-    shaderInfo.pCode    = N3HelloTriangle_frag;
-    /*shaderInfo.codeSize         = sizeof(N3HelloTriangle_frag_hlsl);
-    shaderInfo.pCode            = N3HelloTriangle_frag_hlsl;*/
+    shaderInfo.codeSize = sizeof(N5IndexBuffer_frag);
+    shaderInfo.pCode    = N5IndexBuffer_frag;
     vk::ShaderModule fragShader = device.createShaderModule(shaderInfo);
 
     vk::PipelineShaderStageCreateInfo piplineShaderStage[2];
@@ -160,6 +149,8 @@ void TriangleRenderer::releaseResources()
     device.destroyPipelineLayout(piplineLayout_);
     device.destroyBuffer(vertexBuffer_);
     device.freeMemory(vertexDevMemory_);
+    device.destroyBuffer(indexBuffer_);
+    device.freeMemory(indexDevMemory_);
 }
 
 void TriangleRenderer::startNextFrame()
@@ -203,8 +194,9 @@ void TriangleRenderer::startNextFrame()
     cmdBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, pipline_);
 
     cmdBuffer.bindVertexBuffers(0, vertexBuffer_, {0});
+    cmdBuffer.bindIndexBuffer(indexBuffer_, 0, vk::IndexType::eUint16);
 
-    cmdBuffer.draw(3, 1, 0, 0);
+    cmdBuffer.drawIndexed(6, 1, 0, 0, 0);
 
     cmdBuffer.endRenderPass();
 

@@ -17,7 +17,7 @@ function(compile_shader SHADERS TARGET_NAME SHADER_INCLUDE_FOLDER GENERATED_DIR 
         string(TOUPPER ${HEADER_NAME} GLOBAL_SHADER_VAR)
 
         set(SPV_FILE "${CMAKE_CURRENT_SOURCE_DIR}/${GENERATED_DIR}/spv/${SHADER_NAME}.spv")
-        set(CPP_FILE "${CMAKE_CURRENT_SOURCE_DIR}/${GENERATED_DIR}/cpp/shader/${HEADER_NAME}.h")
+        set(CPP_FILE "${CMAKE_CURRENT_SOURCE_DIR}/${GENERATED_DIR}/cpp/Shader/${HEADER_NAME}.h")
 
         add_custom_command(
             TARGET ${TARGET_NAME} POST_BUILD
@@ -39,9 +39,6 @@ function(compile_shader SHADERS TARGET_NAME SHADER_INCLUDE_FOLDER GENERATED_DIR 
         list(APPEND ALL_GENERATED_CPP_FILES ${CPP_FILE})
 
     endforeach()
-    target_sources(${TARGET_NAME} PRIVATE
-    ${ALL_GENERATED_CPP_FILES}
-    )
     # add_custom_target(${TARGET_NAME}
     #     DEPENDS ${ALL_GENERATED_SPV_FILES} SOURCES ${SHADERS})
 

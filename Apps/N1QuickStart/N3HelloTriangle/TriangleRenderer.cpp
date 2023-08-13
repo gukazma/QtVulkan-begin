@@ -1,8 +1,8 @@
 #include "TriangleRenderer.h"
-#include "shader/E3HelloTriangle_frag.h"
-#include "shader/E3HelloTriangle_frag_hlsl.h"
-#include "shader/E3HelloTriangle_vert.h"
-#include "shader/E3HelloTriangle_vert_hlsl.h"
+#include "Shader/N3HelloTriangle_frag.h"
+#include "Shader/N3HelloTriangle_frag_hlsl.h"
+#include "Shader/N3HelloTriangle_vert.h"
+#include "Shader/N3HelloTriangle_vert_hlsl.h"
 static float vertexData[] = {   // Y up, front = CCW
     0.0f,
     -0.5f,
@@ -47,16 +47,16 @@ void TriangleRenderer::initResources()
     piplineInfo.stageCount = 2;
 
     vk::ShaderModuleCreateInfo shaderInfo;
-    shaderInfo.codeSize = sizeof(E3HelloTriangle_vert);
-    shaderInfo.pCode    = E3HelloTriangle_vert;
-    /*shaderInfo.codeSize         = sizeof(E3HelloTriangle_vert_hlsl);
-    shaderInfo.pCode            = E3HelloTriangle_vert_hlsl;*/
+    shaderInfo.codeSize = sizeof(N3HelloTriangle_vert);
+    shaderInfo.pCode    = N3HelloTriangle_vert;
+    /*shaderInfo.codeSize         = sizeof(N3HelloTriangle_vert_hlsl);
+    shaderInfo.pCode            = N3HelloTriangle_vert_hlsl;*/
     vk::ShaderModule vertShader = device.createShaderModule(shaderInfo);
 
-    shaderInfo.codeSize = sizeof(E3HelloTriangle_frag);
-    shaderInfo.pCode    = E3HelloTriangle_frag;
-    /*shaderInfo.codeSize         = sizeof(E3HelloTriangle_frag_hlsl);
-    shaderInfo.pCode            = E3HelloTriangle_frag_hlsl;*/
+    shaderInfo.codeSize = sizeof(N3HelloTriangle_frag);
+    shaderInfo.pCode    = N3HelloTriangle_frag;
+    /*shaderInfo.codeSize         = sizeof(N3HelloTriangle_frag_hlsl);
+    shaderInfo.pCode            = N3HelloTriangle_frag_hlsl;*/
     vk::ShaderModule fragShader = device.createShaderModule(shaderInfo);
 
     vk::PipelineShaderStageCreateInfo piplineShaderStage[2];
