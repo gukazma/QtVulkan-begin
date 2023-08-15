@@ -1,24 +1,17 @@
 #include "QuadRenderer.h"
-#include "shader/N3HelloTriangle_frag.h"
-#include "shader/N3HelloTriangle_frag_hlsl.h"
-#include "shader/N3HelloTriangle_vert.h"
-#include "shader/N3HelloTriangle_vert_hlsl.h"
+#include "Shader/N6UniformBuffer_frag.h"
+#include "Shader/N6UniformBuffer_vert.h"
+#include <QTime>
 static float vertexData[] = {   // Y up, front = CCW
-    0.0f,
-    -0.5f,
-    1.0f,
-    0.0f,
-    0.0f,
-    -0.5f,
-    0.5f,
-    0.0f,
-    1.0f,
-    0.0f,
-    0.5f,
-    0.5f,
-    0.0f,
-    0.0f,
-    1.0f};
+    -0.5f, -0.5f, 1.0f, 0.0f, 0.0f, 0.5f,  -0.5f, 0.0f, 1.0f, 0.0f,
+    0.5f,  0.5f,  0.0f, 0.0f, 1.0f, -0.5f, 0.5f,  1.0f, 1.0f, 1.0f};
+
+static uint16_t indexData[] = {0, 1, 2, 2, 3, 0};
+
+static inline vk::DeviceSize aligned(vk::DeviceSize v, vk::DeviceSize byteAlign)
+{
+    return (v + byteAlign - 1) & ~(byteAlign - 1);
+}
 
 QuadRenderer::QuadRenderer(QVulkanWindow* window)
     : window_(window)
@@ -33,21 +26,84 @@ void QuadRenderer::initResources()
     vertexBufferInfo_.buffer = indexBufferInfo_.buffer = singleBuffer_;
     vertexBufferInfo_.range = aligned(sizeof(vertexData), limits.minUniformBufferOffsetAlignment);
 
+    indexBufferInfo_.offset = vertexBufferInfo_.range;
+    indexBufferInfo_.range  = aligned(sizeof(indexData), limits.minUniformBufferOffsetAlignment);
+
+    vk::DeviceSize uniformAllocSize_ =
+        aligned(sizeof(float) * 16, limits.minUniformBufferOffsetAlignment);
+
+    vk::BufferCreateInfo singleBufferInfo;
+    singleBufferInfo.usage = vk::BufferUsageFlagBits::eVertexBuffer |
+                             vk::BufferUsageFlagBits::eIndexBuffer |
+                             vk::BufferUsageFlagBits::eUniformBuffer;
+    singleBufferInfo.size =
+        vertexBufferInfo_.range + indexBufferInfo_.range + uniformAllocSize_ * concurrentFrameCount;
+    singleBuffer_ = device.createBuffer(singleBufferInfo);
+    vk::MemoryRequirements singleMemReq = device.getBufferMemoryRequirements(singleBuffer_);
+    vk::MemoryAllocateInfo singleMemAllocInfo(singleMemReq.size, window_->hostVisibleMemoryIndex());
+    singleDevMemory_ = device.allocateMemory(singleMemAllocInfo);
+    device.bindBufferMemory(singleBuffer_, singleDevMemory_, 0);
+    uint8_t* singleBufferMemPtr =
+        (uint8_t*)device.mapMemory(singleDevMemory_, 0, singleMemReq.size);
+    memcpy(singleBufferMemPtr, vertexData, sizeof(vertexData));
+    memcpy(singleBufferMemPtr + vertexBufferInfo_.range, indexData, sizeof(indexData));
+    QMatrix4x4 identify;
+    for (int i = 0; i < concurrentFrameCount; i++) {
+        vk::DeviceSize offset =
+            vertexBufferInfo_.range + indexBufferInfo_.range + i * uniformAllocSize_;
+        memcpy(singleBufferMemPtr + offset, identify.constData(), 16 * sizeof(float));
+        uniformBufferInfo_[i].buffer = singleBuffer_;
+        uniformBufferInfo_[i].offset = offset;
+        uniformBufferInfo_[i].range  = uniformAllocSize_;
+    }
+    device.unmapMemory(singleDevMemory_);
+
+
+
+    vk::DescriptorPoolSize       descPoolSize(vk::DescriptorType::eUniformBuffer,
+                                        (uint32_t)concurrentFrameCount);
+    vk::DescriptorPoolCreateInfo descPoolInfo;
+    descPoolInfo.maxSets       = concurrentFrameCount;
+    descPoolInfo.poolSizeCount = 1;
+    descPoolInfo.pPoolSizes    = &descPoolSize;
+    descPool_                  = device.createDescriptorPool(descPoolInfo);
+
+    vk::DescriptorSetLayoutBinding layoutBinding;
+    layoutBinding.binding            = 0;
+    layoutBinding.descriptorType     = vk::DescriptorType::eUniformBuffer;
+    layoutBinding.descriptorCount    = 1;
+    layoutBinding.stageFlags         = vk::ShaderStageFlagBits::eVertex;
+    layoutBinding.pImmutableSamplers = nullptr;
+
+    vk::DescriptorSetLayoutCreateInfo descLayoutInfo;
+    descLayoutInfo.pNext        = nullptr;
+    descLayoutInfo.flags        = {};
+    descLayoutInfo.bindingCount = 1;
+    descLayoutInfo.pBindings    = &layoutBinding;
+
+    descSetLayout_ = device.createDescriptorSetLayout(descLayoutInfo);
+
+    for (int i = 0; i < concurrentFrameCount; ++i) {
+        vk::DescriptorSetAllocateInfo descSetAllocInfo(descPool_, 1, &descSetLayout_);
+        descSet_[i] = device.allocateDescriptorSets(descSetAllocInfo).front();
+        vk::WriteDescriptorSet descWrite;
+        descWrite.dstSet          = descSet_[i];
+        descWrite.descriptorCount = 1;
+        descWrite.descriptorType  = vk::DescriptorType::eUniformBuffer;
+        descWrite.pBufferInfo     = &uniformBufferInfo_[i];
+        device.updateDescriptorSets(1, &descWrite, 0, nullptr);
+    }
 
     vk::GraphicsPipelineCreateInfo piplineInfo;
     piplineInfo.stageCount = 2;
 
     vk::ShaderModuleCreateInfo shaderInfo;
-    shaderInfo.codeSize = sizeof(N3HelloTriangle_vert);
-    shaderInfo.pCode    = N3HelloTriangle_vert;
-    /*shaderInfo.codeSize         = sizeof(N3HelloTriangle_vert_hlsl);
-    shaderInfo.pCode            = N3HelloTriangle_vert_hlsl;*/
+    shaderInfo.codeSize         = sizeof(N6UniformBuffer_vert);
+    shaderInfo.pCode            = N6UniformBuffer_vert;
     vk::ShaderModule vertShader = device.createShaderModule(shaderInfo);
 
-    shaderInfo.codeSize = sizeof(N3HelloTriangle_frag);
-    shaderInfo.pCode    = N3HelloTriangle_frag;
-    /*shaderInfo.codeSize         = sizeof(N3HelloTriangle_frag_hlsl);
-    shaderInfo.pCode            = N3HelloTriangle_frag_hlsl;*/
+    shaderInfo.codeSize         = sizeof(N6UniformBuffer_frag);
+    shaderInfo.pCode            = N6UniformBuffer_frag;
     vk::ShaderModule fragShader = device.createShaderModule(shaderInfo);
 
     vk::PipelineShaderStageCreateInfo piplineShaderStage[2];
@@ -120,8 +176,10 @@ void QuadRenderer::initResources()
     piplineInfo.pDynamicState         = &dynamicState;
 
     vk::PipelineLayoutCreateInfo piplineLayoutInfo;
-    piplineLayout_     = device.createPipelineLayout(piplineLayoutInfo);
-    piplineInfo.layout = piplineLayout_;
+    piplineLayoutInfo.setLayoutCount = 1;
+    piplineLayoutInfo.pSetLayouts    = &descSetLayout_;
+    piplineLayout_                   = device.createPipelineLayout(piplineLayoutInfo);
+    piplineInfo.layout               = piplineLayout_;
 
     piplineInfo.renderPass = window_->defaultRenderPass();
 
@@ -142,7 +200,10 @@ void QuadRenderer::releaseResources()
     device.destroyPipeline(pipline_);
     device.destroyPipelineCache(piplineCache_);
     device.destroyPipelineLayout(piplineLayout_);
-
+    device.destroyDescriptorSetLayout(descSetLayout_);
+    device.destroyDescriptorPool(descPool_);
+    device.destroyBuffer(singleBuffer_);
+    device.freeMemory(singleDevMemory_);
 }
 
 void QuadRenderer::startNextFrame()
@@ -167,6 +228,16 @@ void QuadRenderer::startNextFrame()
 
     cmdBuffer.beginRenderPass(beginInfo, vk::SubpassContents::eInline);
 
+    uint8_t* uniformMatrixMemPtr =
+        (uint8_t*)device.mapMemory(singleDevMemory_,
+                                   uniformBufferInfo_[window_->currentFrame()].offset,
+                                   sizeof(float) * 16,
+                                   {});
+    QMatrix4x4 matrix;
+    matrix.rotate(QTime::currentTime().msecsSinceStartOfDay() / 10.0, 0, 0, 1);
+    memcpy(uniformMatrixMemPtr, matrix.constData(), 16 * sizeof(float));
+    device.unmapMemory(singleDevMemory_);
+
     vk::Viewport viewport;
     viewport.x      = 0;
     viewport.y      = 0;
@@ -185,8 +256,20 @@ void QuadRenderer::startNextFrame()
 
     cmdBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, pipline_);
 
+    cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics,
+                                 piplineLayout_,
+                                 0,
+                                 1,
+                                 &descSet_[window_->currentFrame()],
+                                 0,
+                                 nullptr);
 
-    cmdBuffer.draw(3, 1, 0, 0);
+    cmdBuffer.bindVertexBuffers(0, singleBuffer_, {0});
+
+    cmdBuffer.bindIndexBuffer(singleBuffer_, indexBufferInfo_.offset, vk::IndexType::eUint16);
+   
+
+    cmdBuffer.drawIndexed(6, 1, 0, 0, 0);
 
     cmdBuffer.endRenderPass();
 

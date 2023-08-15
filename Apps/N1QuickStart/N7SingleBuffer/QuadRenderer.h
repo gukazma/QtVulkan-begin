@@ -23,6 +23,10 @@ private:
     vk::DescriptorBufferInfo indexBufferInfo_;
     vk::DescriptorBufferInfo uniformBufferInfo_[QVulkanWindow::MAX_CONCURRENT_FRAME_COUNT];
 
+    vk::DescriptorPool      descPool_;
+    vk::DescriptorSetLayout descSetLayout_;
+    vk::DescriptorSet       descSet_[QVulkanWindow::MAX_CONCURRENT_FRAME_COUNT];
+
     vk::PipelineCache  piplineCache_;
     vk::PipelineLayout piplineLayout_;
     vk::Pipeline       pipline_;
